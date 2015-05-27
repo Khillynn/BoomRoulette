@@ -1,0 +1,5 @@
+name: BaddaBoomRoulette
+version: 1.0
+description: mini game where pressure plates are randomly created, players gain some sort of reward as they press them. If the plate creates an explosion then the player loses their rewards.
+author: Khillynn
+main: com.khillynn.BaddaBoomRoulette
