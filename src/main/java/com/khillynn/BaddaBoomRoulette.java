@@ -25,7 +25,7 @@ import java.util.Random;
 
 public class BaddaBoomRoulette extends JavaPlugin implements Listener {
     final String world = "Witness_Me";
-    final int plateRadius = 8;
+    final int plateRadius = 8, plateAmt = 10, plateXZsTotal = (plateAmt * 2);
     boolean hasPlayed = false;
     final ArrayList<Location> arenaLocations = new ArrayList<>();
     final ArrayList<Location> plateLocations = new ArrayList<>();
@@ -68,7 +68,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
 
             removePlate(thePlate);
             int shinyAndChrome = new Random().nextInt(100) + 1; /*provides a random chance for the player to receive a diamond, have a firework
-                                                                go off, or to have an explosion created and to loose their inventory*/
+                                                                go off, or to have an explosion created and to lose their inventory*/
             final Player player = e.getPlayer();
             final Location loc = player.getLocation();
             final Inventory inventory = player.getInventory();
@@ -115,7 +115,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
                     resetBlocks();
 
                 //gets 10 random locations in the arena
-                for(int locLoop = 1; locLoop <= 10; locLoop++){
+                for(int locLoop = 1; locLoop <= plateAmt; locLoop++){
                     int randomX = new Random().nextInt(arenaLocations.size());
                     int randomZ = new Random().nextInt(arenaLocations.size());
                     if((randomX == spawnPoint.getBlockX()) && (randomZ == spawnPoint.getBlockZ())) {
@@ -133,7 +133,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
                 }
 
                 //gets all the locations of the blocks being changed
-                for(int plateNum = 0; plateNum < 20; plateNum+=2){
+                for(int plateNum = 0; plateNum < plateXZsTotal; plateNum+=2){
                     if(plateNum == 0)
                         plateLocations.clear();
 
@@ -142,7 +142,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
                 }
 
                 //gets the blocks being changed (to get their original material and to change them later)
-                for(int eachBlock = 0; eachBlock < 20; eachBlock++){
+                for(int eachBlock = 0; eachBlock < plateXZsTotal; eachBlock++){
                     if(eachBlock == 0)
                         origBlocks.clear();
 
@@ -150,7 +150,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
                 }
 
                 //gets the original material type of the blocks
-                for(int eachMat = 0; eachMat < 20; eachMat++){
+                for(int eachMat = 0; eachMat < plateXZsTotal; eachMat++){
                     if(eachMat == 0)
                         origMats.clear();
 
@@ -158,7 +158,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
                 }
 
                 //changes all of the locations and the block below them to a pressure plate and a colored wool
-                for(int changedBlock = 0; changedBlock < 20; changedBlock+=2){
+                for(int changedBlock = 0; changedBlock < plateXZsTotal; changedBlock+=2){
                     int randColor = new Random().nextInt(woolColors.size());
 
                     origBlocks.get(changedBlock).setType(Material.GOLD_PLATE);
@@ -173,7 +173,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
     }
 
     private void resetBlocks() {
-        for (int changeToOrig = 0; changeToOrig < 20; changeToOrig += 2) {
+        for (int changeToOrig = 0; changeToOrig < plateXZsTotal; changeToOrig += 2) {
             origBlocks.get(changeToOrig).setType(origMats.get(changeToOrig));
             origBlocks.get(changeToOrig + 1).setType(origMats.get(changeToOrig + 1));
         }
