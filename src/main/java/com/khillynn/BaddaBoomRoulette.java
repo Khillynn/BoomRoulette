@@ -86,6 +86,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
             } else if (shinyAndChrome > 70 && shinyAndChrome <= 100) {
                 Bukkit.getServer().getWorld(world).createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0.0F, false, false);
                 inventory.clear();
+                player.teleport(spawnPoint);
                 createPlates();
             }
         }
