@@ -96,7 +96,8 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
     private void removePlate(Location thePlate) {
         for(int plateLocToRemove = 0; plateLocToRemove < plateLocations.size(); plateLocToRemove+=2){
             if((plateLocations.get(plateLocToRemove).getX() == thePlate.getX()) && (plateLocations.get(plateLocToRemove).getZ() == thePlate.getZ())) {
-                thePlate.getBlock().setType(Material.AIR);
+                //thePlate.getBlock().setType(Material.AIR);
+                thePlate.getBlock().setType(origMats.get(plateLocToRemove));
                 thePlate.getBlock().getRelative(BlockFace.DOWN).setType(origMats.get(plateLocToRemove + 1));
             }
         }
