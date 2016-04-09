@@ -8,22 +8,23 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockDamageEvent;
-import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.scheduler.BukkitScheduler;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class BaddaBoomRoulette extends JavaPlugin implements Listener {
+public class BaddaBoomRoulette extends JavaPlugin implements Listener, PluginMessageListener{
     final String world = "Witness_Me";
     final int plateRadius = 8, plateAmt = 10, plateXZsTotal = (plateAmt * 2);
     int platesOutOfPlay = 0, CntDownTaskID;
@@ -33,13 +34,15 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
     final ArrayList<DyeColor> woolColors = new ArrayList<>();
     final ArrayList<org.bukkit.block.Block> origBlocks = new ArrayList<>();
     final ArrayList<Material> origMats = new ArrayList<>();
-    final ArrayList<Integer> diamondAmt = new ArrayList<>();
     final List<Double> createXZs = new ArrayList<>();
     final BukkitScheduler roundStartCounter = Bukkit.getServer().getScheduler();
 
     public void onEnable() {
         Bukkit.getPluginManager().registerEvents(this, this);
         getLogger().info("BaddaBoomRoulette is Enabled! =D");
+
+        Bukkit.getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+        Bukkit.getMessenger().registerIncomingPluginChannel(this, "BugeeCord", this);
 
         final Location spawnPoint = Bukkit.getWorld(world).getSpawnLocation();
 
@@ -94,7 +97,10 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
                         Bukkit.broadcastMessage("[" + ChatColor.GOLD + "Server" + ChatColor.WHITE + "]: " + ChatColor.YELLOW + "Go forth for the Glory of ValHalla!");
                         Bukkit.getServer().getWorld(world).playSound(spawnPoint, Sound.EXPLODE, 1, 2);
                         createPlates();
+                        Location spawnPoint = Bukkit.getWorld(world).getSpawnLocation();
+                        Bukkit.getServer().getWorld(world).playEffect(spawnPoint, Effect.RECORD_PLAY, Material.GREEN_RECORD);
                     } else if (seconds == 90) {
+                        Bukkit.getServer().getWorld(world).playEffect(spawnPoint, Effect.RECORD_PLAY, 0);
                         resetBlocks();
                         comparePlayerInv();
                     }
@@ -107,94 +113,126 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
 
     //at the end of the round all players' inventories are compared to find the winner
     private void comparePlayerInv() {
-        Player[] onlinePlayers = Bukkit.getOnlinePlayers();
+        final Player[] onlinePlayers = Bukkit.getOnlinePlayers();
         ArrayList<Player> players = new ArrayList<>();
+        ArrayList<Integer> diamondAmt = new ArrayList<>();
         int playerAmt = 0;
 
         for(Player all : onlinePlayers){
-            PlayerInventory inventory = all.getInventory();
+            ItemStack hand = all.getItemInHand();
 
-            for(ItemStack items : inventory.getContents()){
-                if((items != null) && (items.getType() == Material.DIAMOND)){
-                    diamondAmt.add(items.getAmount());
-                }
+            if(hand.getType() == Material.DIAMOND){
+                diamondAmt.add(hand.getAmount());
+            }
+            else{
+                diamondAmt.add(0);
             }
             players.add(all);
             playerAmt++;
         }
 
-        int winningAmt = diamondAmt.get(0), firstDiamAmt = diamondAmt.get(0), playerTies = 0;
+        int winningAmt = diamondAmt.get(0), playerTies = 0, tiedDiamondAmt = 0;
         boolean noWin = false;
         Player winner = players.get(0);
 
-        for(int playerNum = 0; playerNum < onlinePlayers.length; playerNum++){
+        //Collections.sort(diamondAmt);
+
+        for(int playerNum = 1; playerNum < onlinePlayers.length; playerNum++){
             if(diamondAmt.get(playerNum) > winningAmt) {
                 winningAmt = diamondAmt.get(playerNum);
                 winner = players.get(playerNum);
             }
-            if(firstDiamAmt == diamondAmt.get(playerNum))
+            else if(diamondAmt.get(playerNum) == winningAmt) {
                 playerTies++;
+                tiedDiamondAmt = diamondAmt.get(playerNum);
+            }
         }
 
-        if(playerTies == playerAmt)
+        if((playerTies == playerAmt) || (tiedDiamondAmt == winningAmt))
             noWin = true;
+
+        if(playerAmt == 1)
+            noWin = false;
 
         if(!noWin) {
             Firework fw = (Firework) winner.getWorld().spawnEntity(winner.getLocation(), EntityType.FIREWORK);
             FireworkMeta fm = fw.getFireworkMeta();
             fm.addEffect(FireworkEffect.builder().flicker(true).withColor(Color.PURPLE).withFade(Color.BLUE).with(FireworkEffect.Type.STAR).trail(true).build());
-            fm.setPower(1);
+            fm.setPower(0);
 
             for (int fwNum = 1; fwNum <= 5; fwNum++) {
                 fw.setFireworkMeta(fm);
             }
-            Bukkit.broadcastMessage("[" + ChatColor.GOLD + "Server" + ChatColor.WHITE + "]: " + ChatColor.YELLOW + "The Winner is: " + ChatColor.WHITE + winner.getName() + ChatColor.YELLOW + " with " + ChatColor.AQUA + winningAmt + " diamonds" + ChatColor.YELLOW + "!");
+            Bukkit.broadcastMessage("[" + ChatColor.GOLD + "Server" + ChatColor.WHITE + "]: " + ChatColor.YELLOW + "The Winner is " + ChatColor.WHITE + winner.getName() + ChatColor.YELLOW + " with " + ChatColor.AQUA + winningAmt + " diamonds" + ChatColor.YELLOW + "!");
         }
         else
             Bukkit.broadcastMessage("[" + ChatColor.GOLD + "Server" + ChatColor.WHITE + "]: " + ChatColor.YELLOW + "The is no winner.");
 
         Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
             public void run() {
-                Bukkit.getServer().shutdown();
+                tpPlayersToHub(onlinePlayers);
             }
         }, 100L);
     }
 
+    private void tpPlayersToHub(Player[] onlinePlayers) {
+        for(Player all : onlinePlayers){
+            ByteArrayOutputStream b = new ByteArrayOutputStream();
+            DataOutputStream out = new DataOutputStream(b);
+            try{
+                out.writeUTF("Connect");
+                out.writeUTF("hub");
+            } catch(Exception exception){
+                exception.printStackTrace();
+            }
+            all.sendPluginMessage(this, "BungeeCord", b.toByteArray());
+        }
+    }
+
     @EventHandler
     public void plateActivated (final PlayerInteractEvent e) { //this needs to be fixed so it is only activated once
-        if((e.getAction().equals(Action.PHYSICAL) && e.getClickedBlock().getType() == Material.GOLD_PLATE))
-        {
-            final Location thePlateLoc = new Location(Bukkit.getServer().getWorld(world), e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ());
+        BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
+        final Player player = e.getPlayer();
 
-            final int shinyAndChrome = new Random().nextInt(100) + 1; /*provides a random chance for the player to receive a diamond, have a firework
+        scheduler.scheduleSyncDelayedTask(this, new Runnable() {
+            @Override
+            public void run() {
+
+                if ((e.getAction().equals(Action.PHYSICAL) && e.getClickedBlock().getType() == Material.GOLD_PLATE)) {
+                    final Location thePlateLoc = new Location(Bukkit.getServer().getWorld(world), e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ());
+
+                    final int shinyAndChrome = new Random().nextInt(100) + 1; /*provides a random chance for the player to receive a diamond, have a firework
                                                                 go off, or to have an explosion created and to loose their inventory*/
-            final Player player = e.getPlayer();
-            final Location loc = player.getLocation();
-            final Inventory inventory = player.getInventory();
+                    final Player player = e.getPlayer();
+                    final Location loc = player.getLocation();
+                    final Inventory inventory = player.getInventory();
 
-            removePlate(thePlateLoc);
-            //these three if and else-if statements determine what the player is rewarded with when they push a pressure plate
-            if (shinyAndChrome >= 1 && shinyAndChrome <= 20) {
-                Firework fw = (Firework) player.getWorld().spawnEntity(loc, EntityType.FIREWORK);
-                FireworkMeta fm = fw.getFireworkMeta();
-                fm.addEffect(FireworkEffect.builder().flicker(true).withColor(Color.YELLOW).withFade(Color.RED).with(FireworkEffect.Type.BALL_LARGE).trail(true).build());
-                fm.setPower(1);
-                fw.setFireworkMeta(fm);
-            } else if (shinyAndChrome > 20 && shinyAndChrome <= 80) {
-                inventory.addItem(new ItemStack(Material.DIAMOND, 1));
-            } else if (shinyAndChrome > 80 && shinyAndChrome <= 100) {
-                Bukkit.getServer().getWorld(world).createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0.0F, false, false);
-                inventory.clear();
-                createPlates();
+                    removePlate(thePlateLoc);
+                    //these three if and else-if statements determine what the player is rewarded with when they push a pressure plate
+                    if (shinyAndChrome >= 1 && shinyAndChrome <= 20) {
+                        Firework fw = (Firework) player.getWorld().spawnEntity(loc, EntityType.FIREWORK);
+                        FireworkMeta fm = fw.getFireworkMeta();
+                        fm.addEffect(FireworkEffect.builder().flicker(true).withColor(Color.YELLOW).withFade(Color.RED).with(FireworkEffect.Type.BALL_LARGE).trail(true).build());
+                        fm.setPower(0);
+                        fw.setFireworkMeta(fm);
+                        player.setVelocity(player.getEyeLocation().getDirection().multiply(2));
+                    } else if (shinyAndChrome > 20 && shinyAndChrome <= 80) {
+                        inventory.addItem(new ItemStack(Material.DIAMOND, 1));
+                        player.setVelocity(player.getEyeLocation().getDirection().multiply(2));
+                    } else if (shinyAndChrome > 80 && shinyAndChrome <= 100) {
+                        Bukkit.getServer().getWorld(world).createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0.0F, false, false);
+                        inventory.clear();
+                        createPlates();
+                    }
+                }
+
             }
-        }
+        }, 10L);
     }
 
     //removes an individual plate if the player's plate didn't cause an explosion
     private void removePlate(Location thePlateLoc) {
         platesOutOfPlay++;
-        if(platesOutOfPlay == 10) //add some sort of affect or message to let the players know they might not have been penalized (only added 10 more plates)
-            createPlates();
 
         for(int plateLocToRemove = 0; plateLocToRemove < plateLocations.size(); plateLocToRemove+=2){
             if((plateLocations.get(plateLocToRemove).getX() == thePlateLoc.getX()) && (plateLocations.get(plateLocToRemove).getZ() == thePlateLoc.getZ())) {
@@ -202,6 +240,8 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
                 plateLocations.get(plateLocToRemove + 1).getBlock().setType(origMats.get(plateLocToRemove + 1));
             }
         }
+        if(platesOutOfPlay == 10) //add some sort of affect or message to let the players know they might not have been penalized (only added 10 more plates)
+            createPlates();
     }
 
     //create the pressure plates/colored wool
@@ -273,16 +313,18 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
     }
 
     private void resetBlocks() {
-        for (int changeToOrig = 0; changeToOrig < plateXZsTotal; changeToOrig += 2) {
-            origBlocks.get(changeToOrig).setType(origMats.get(changeToOrig));
-            origBlocks.get(changeToOrig + 1).setType(origMats.get(changeToOrig + 1));
-        }
+        if(origBlocks.get(0) != null)
+            for (int changeToOrig = 0; changeToOrig < plateXZsTotal; changeToOrig += 2) {
+                origBlocks.get(changeToOrig).setType(origMats.get(changeToOrig));
+                origBlocks.get(changeToOrig + 1).setType(origMats.get(changeToOrig + 1));
+            }
     }
 
     @EventHandler
     public  void playerJoin (PlayerJoinEvent e){
         Location spawnPoint = Bukkit.getWorld(world).getSpawnLocation();
         e.getPlayer().teleport(spawnPoint);
+        e.getPlayer().getInventory().clear();
         checkPlayersAndStart();
     }
 
@@ -294,6 +336,16 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
     @EventHandler
     public void playerRespawn (PlayerRespawnEvent e){
         e.getPlayer().getInventory().clear();
+    }
+
+    @EventHandler
+    public void itemMove(InventoryClickEvent e){
+        e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void handChange(PlayerItemHeldEvent e){
+        e.setCancelled(true);
     }
 
     @EventHandler
@@ -312,12 +364,6 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
         e.setCancelled(true);
     }
 
-    //prevents players from regaining health
-    @EventHandler
-    public void playerHPRegen (EntityRegainHealthEvent e){
-        e.setCancelled(true);
-    }
-
     //prevents players from becoming hungry
     @EventHandler
     public void playerHungerStop (FoodLevelChangeEvent e){
@@ -333,5 +379,17 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         resetBlocks();
+    }
+
+    @Override
+    public void onPluginMessageReceived(String s, Player player, byte[] bytes) {
+        DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
+        player.sendMessage("recieved");
+        try{
+            String msg = in.readUTF();
+            Bukkit.broadcastMessage(msg);
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
     }
 }
