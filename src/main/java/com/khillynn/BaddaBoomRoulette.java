@@ -12,6 +12,7 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -168,11 +169,27 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener, PluginMes
         else
             Bukkit.broadcastMessage("[" + ChatColor.GOLD + "Server" + ChatColor.WHITE + "]: " + ChatColor.YELLOW + "The is no winner.");
 
+        incPoints(winner, players, winningAmt);
         Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
             public void run() {
                 tpPlayersToHub(onlinePlayers);
             }
         }, 100L);
+    }
+
+    public void incPoints(Player winner, ArrayList<Player> players, int winningAmt){
+        MongoDB mdb = new MongoDB(MongoDBD.username, MongoDBD.password, MongoDBD.database, MongoDBD.host, MongoDBD.port);
+        mdb.setDatabase(MongoDBD.database);
+
+        for (Player all : players){
+            if (winner == all){
+                mdb.incUserPoints(all, 10 + winningAmt);
+                continue;
+            }
+            mdb.incUserPoints(all, 5);
+        }
+
+        mdb.closeConnection();
     }
 
     private void tpPlayersToHub(Player[] onlinePlayers) {
@@ -361,6 +378,12 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener, PluginMes
     //prevents blocks from breaking
     @EventHandler
     public void blockDamaged (BlockDamageEvent e){
+        e.setCancelled(true);
+    }
+
+    //prevents weather changes
+    @EventHandler
+    public void weatherChange(WeatherChangeEvent e){
         e.setCancelled(true);
     }
 
