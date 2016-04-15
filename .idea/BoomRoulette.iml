@@ -15,5 +15,7 @@
     <orderEntry type="library" name="Maven: com.khillynn:DatabaseManager:1.0-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.bukkit:bukkit:1.7.2-R0.2" level="project" />
     <orderEntry type="library" name="DatabaseManager-1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.khillynn:DatabaseManager:1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: org.bukkit:bukkit:1.7.2-R0.2" level="project" />
   </component>
 </module>

@@ -42,6 +42,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener, PluginMes
         Bukkit.getPluginManager().registerEvents(this, this);
         getLogger().info("BaddaBoomRoulette is Enabled! =D");
 
+
         Bukkit.getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "BugeeCord", this);
 
@@ -72,6 +73,11 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener, PluginMes
 
                 public void run() {
                     seconds++;
+                    if(Bukkit.getServer().getOnlinePlayers().length == 1){
+                        Bukkit.broadcastMessage("[" + ChatColor.GOLD + "Server" + ChatColor.WHITE + "]: " + ChatColor.YELLOW + "waiting for more players");
+                        seconds = 0;
+                        Bukkit.getServer().getScheduler().cancelTask(CntDownTaskID);
+                    }
                     if (seconds == 15)
                         Bukkit.broadcastMessage("[" + ChatColor.GOLD + "Server" + ChatColor.WHITE + "]: " + ChatColor.YELLOW + "15 seconds until the round begins");
                     else if (seconds == 25) {
@@ -179,14 +185,17 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener, PluginMes
 
     public void incPoints(Player winner, ArrayList<Player> players, int winningAmt){
         MongoDB mdb = new MongoDB(MongoDBD.username, MongoDBD.password, MongoDBD.database, MongoDBD.host, MongoDBD.port);
-        mdb.setDatabase(MongoDBD.database);
 
         for (Player all : players){
             if (winner == all){
                 mdb.incUserPoints(all, 10 + winningAmt);
-                continue;
+                System.out.println(" ++++++++++ increasing " + all.getName() + "'s points by " + (10 + winningAmt));
             }
-            mdb.incUserPoints(all, 5);
+            else {
+                mdb.incUserPoints(all, 5);
+                System.out.println(" ++++++++++ increasing " + all.getName() + "'s points by 5");
+            }
+
         }
 
         mdb.closeConnection();
