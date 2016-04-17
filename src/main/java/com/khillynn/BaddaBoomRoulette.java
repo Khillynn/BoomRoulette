@@ -44,7 +44,7 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener, PluginMes
 
 
         Bukkit.getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
-        Bukkit.getMessenger().registerIncomingPluginChannel(this, "BugeeCord", this);
+        Bukkit.getMessenger().registerIncomingPluginChannel(this, "BungeeCord", this);
 
         final Location spawnPoint = Bukkit.getWorld(world).getSpawnLocation();
 
@@ -184,21 +184,19 @@ public class BaddaBoomRoulette extends JavaPlugin implements Listener, PluginMes
     }
 
     public void incPoints(Player winner, ArrayList<Player> players, int winningAmt){
-        MongoDB mdb = new MongoDB(MongoDBD.username, MongoDBD.password, MongoDBD.database, MongoDBD.host, MongoDBD.port);
+        MongoDB mdb = Core.getMongoDB();
 
         for (Player all : players){
             if (winner == all){
                 mdb.incUserPoints(all, 10 + winningAmt);
-                System.out.println(" ++++++++++ increasing " + all.getName() + "'s points by " + (10 + winningAmt));
+                System.out.println(" ++++++++++ increased " + all.getName() + "'s points by " + (10 + winningAmt));
             }
             else {
                 mdb.incUserPoints(all, 5);
-                System.out.println(" ++++++++++ increasing " + all.getName() + "'s points by 5");
+                System.out.println(" ++++++++++ increased " + all.getName() + "'s points by 5");
             }
 
         }
-
-        mdb.closeConnection();
     }
 
     private void tpPlayersToHub(Player[] onlinePlayers) {
